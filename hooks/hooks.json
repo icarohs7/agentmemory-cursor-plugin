@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [ { "command": "node ~/.cursor/plugins/local/agentmemory/scripts/cursor-hook.mjs" } ],
+    "beforeSubmitPrompt": [ { "command": "node ~/.cursor/plugins/local/agentmemory/scripts/cursor-hook.mjs" } ],
+    "preToolUse": [
+      {
+        "command": "node ~/.cursor/plugins/local/agentmemory/scripts/cursor-hook.mjs",
+        "matcher": "Read|Write|Grep|Glob|Task|WebFetch|WebSearch|Shell"
+      }
+    ],
+    "postToolUse": [
+      {
+        "command": "node ~/.cursor/plugins/local/agentmemory/scripts/cursor-hook.mjs",
+        "matcher": "*"
+      }
+    ],
+    "postToolUseFailure": [ { "command": "node ~/.cursor/plugins/local/agentmemory/scripts/cursor-hook.mjs" } ],
+    "afterFileEdit": [ { "command": "node ~/.cursor/plugins/local/agentmemory/scripts/cursor-hook.mjs" } ],
+    "afterShellExecution": [ { "command": "node ~/.cursor/plugins/local/agentmemory/scripts/cursor-hook.mjs" } ],
+    "afterMCPExecution": [ { "command": "node ~/.cursor/plugins/local/agentmemory/scripts/cursor-hook.mjs" } ],
+    "preCompact": [ { "command": "node ~/.cursor/plugins/local/agentmemory/scripts/cursor-hook.mjs" } ],
+    "subagentStart": [ { "command": "node ~/.cursor/plugins/local/agentmemory/scripts/cursor-hook.mjs" } ],
+    "subagentStop": [ { "command": "node ~/.cursor/plugins/local/agentmemory/scripts/cursor-hook.mjs" } ],
+    "stop": [ { "command": "node ~/.cursor/plugins/local/agentmemory/scripts/cursor-hook.mjs" } ],
+    "sessionEnd": [ { "command": "node ~/.cursor/plugins/local/agentmemory/scripts/cursor-hook.mjs" } ]
+  }
+}
