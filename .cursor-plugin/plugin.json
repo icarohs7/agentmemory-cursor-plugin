@@ -1,12 +1,12 @@
 {
-  "name": "agentmemory",
-  "version": "0.9.21",
-  "description": "Persistent memory for AI coding agents -- Cursor-native hooks (sessionStart, beforeSubmitPrompt, postToolUse, afterFileEdit, shell/MCP), MCP tools, and skills.",
+  "name": "agentmemory-cursor-plugin",
+  "version": "0.9.22",
+  "description": "Cursor IDE + Windows adaptation of agentmemory hooks and skills. Requires the agentmemory backend (https://github.com/rohitg00/agentmemory).",
   "author": {
     "name": "Rohit Ghumare",
     "url": "https://github.com/rohitg00"
   },
   "license": "Apache-2.0",
-  "homepage": "https://github.com/rohitg00/agentmemory",
-  "repository": "https://github.com/rohitg00/agentmemory"
+  "homepage": "https://github.com/icarohs7/agentmemory-cursor-plugin",
+  "repository": "https://github.com/icarohs7/agentmemory-cursor-plugin"
 }

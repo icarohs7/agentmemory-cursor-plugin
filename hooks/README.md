@@ -2,9 +2,9 @@
 
 `hooks.json` uses **Cursor-native** hook events (`sessionStart`, `beforeSubmitPrompt`, `postToolUse`, `afterFileEdit`, etc.). Cursor loads this format directly — no Claude Code → Cursor conversion (and no `matcher.split` pitfalls).
 
-All events route to `scripts/cursor-hook.mjs` (via `run-cursor-hook.ps1` on Windows), which dispatches on `hook_event_name` in the stdin JSON payload.
+All events route to `scripts/cursor-hook-bootstrap.mjs`, which on Windows reads Cursor’s hook JSON from a temp file and forwards it to `scripts/cursor-hook.mjs` on stdin. The handler dispatches on `hook_event_name` in the payload.
 
-On Windows, `hooks.json` uses a PowerShell wrapper because Cursor 3.5.x pipes hook JSON through PowerShell and Node does not receive it on stdin when invoked directly.
+On Windows, Cursor 3.5.x often does not pipe hook JSON to Node on stdin; the bootstrap and temp-file fallback in `cursor-common.mjs` address that.
 
 ## Claude Code format (backup)
 
