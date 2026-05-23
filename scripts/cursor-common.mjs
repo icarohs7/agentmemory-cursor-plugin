@@ -1,5 +1,9 @@
 #!/usr/bin/env node
 
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 /** Shared helpers for Cursor-native agentmemory hooks. */
 
 export const REST_URL = process.env.AGENTMEMORY_URL || "http://localhost:3111";
@@ -20,9 +24,76 @@ export function authHeaders() {
 	return h;
 }
 
+function windowsTempDirs() {
+	const dirs = new Set();
+	for (const value of [
+		tmpdir(),
+		process.env.TEMP,
+		process.env.TMP,
+		process.env.LOCALAPPDATA
+			? join(process.env.LOCALAPPDATA, "Temp")
+			: undefined,
+	]) {
+		if (typeof value === "string" && value.length > 0) dirs.add(value);
+	}
+	return [...dirs];
+}
+
+/** Cursor on Windows writes hook JSON to a temp file; PowerShell often does not pipe it to node stdin. */
+function readPayloadFromWindowsTempFile() {
+	if (process.platform !== "win32") return null;
+	const now = Date.now();
+	const candidates = [];
+	for (const dir of windowsTempDirs()) {
+		try {
+			for (const name of readdirSync(dir)) {
+				if (
+					!name.startsWith("cursor-hook-payload-") ||
+					!name.endsWith(".json")
+				) {
+					continue;
+				}
+				const path = join(dir, name);
+				const mtime = statSync(path).mtimeMs;
+				if (now - mtime < 120_000) candidates.push({ path, mtime });
+			}
+		} catch {
+			// ignore unreadable temp dirs
+		}
+	}
+	candidates.sort((a, b) => b.mtime - a.mtime);
+	hookLog(
+		"temp payload scan",
+		`dirs=${windowsTempDirs().length}`,
+		`matches=${candidates.length}`,
+	);
+	if (candidates.length === 0) return null;
+	hookLog("temp payload using", candidates[0].path);
+	return readFileSync(candidates[0].path, "utf8");
+}
+
 export async function readJsonFromStdin() {
 	let input = "";
-	for await (const chunk of process.stdin) input += chunk;
+	try {
+		if (!process.stdin.isTTY) {
+			input = readFileSync(0, "utf8");
+		}
+	} catch {
+		// ignore
+	}
+	// Do not block on an interactive TTY; Cursor hooks use a pipe or temp file on Windows.
+	if (!input.trim() && !process.stdin.isTTY) {
+		const chunks = [];
+		for await (const chunk of process.stdin) {
+			chunks.push(chunk);
+		}
+		if (chunks.length > 0) {
+			input = Buffer.concat(chunks).toString("utf8");
+		}
+	}
+	if (!input.trim()) {
+		input = readPayloadFromWindowsTempFile() ?? "";
+	}
 	if (!input.trim()) return null;
 	try {
 		return JSON.parse(input);

@@ -1,28 +1,28 @@
 {
   "version": 1,
   "hooks": {
-    "sessionStart": [ { "command": "node ~/.cursor/plugins/local/agentmemory/scripts/cursor-hook.mjs" } ],
-    "beforeSubmitPrompt": [ { "command": "node ~/.cursor/plugins/local/agentmemory/scripts/cursor-hook.mjs" } ],
+    "sessionStart": [ { "command": "node \"${CURSOR_PLUGIN_ROOT}/scripts/cursor-hook-bootstrap.mjs\"" } ],
+    "beforeSubmitPrompt": [ { "command": "node \"${CURSOR_PLUGIN_ROOT}/scripts/cursor-hook-bootstrap.mjs\"" } ],
     "preToolUse": [
       {
-        "command": "node ~/.cursor/plugins/local/agentmemory/scripts/cursor-hook.mjs",
+        "command": "node \"${CURSOR_PLUGIN_ROOT}/scripts/cursor-hook-bootstrap.mjs\"",
         "matcher": "Read|Write|Grep|Glob|Task|WebFetch|WebSearch|Shell"
       }
     ],
     "postToolUse": [
       {
-        "command": "node ~/.cursor/plugins/local/agentmemory/scripts/cursor-hook.mjs",
+        "command": "node \"${CURSOR_PLUGIN_ROOT}/scripts/cursor-hook-bootstrap.mjs\"",
         "matcher": "*"
       }
     ],
-    "postToolUseFailure": [ { "command": "node ~/.cursor/plugins/local/agentmemory/scripts/cursor-hook.mjs" } ],
-    "afterFileEdit": [ { "command": "node ~/.cursor/plugins/local/agentmemory/scripts/cursor-hook.mjs" } ],
-    "afterShellExecution": [ { "command": "node ~/.cursor/plugins/local/agentmemory/scripts/cursor-hook.mjs" } ],
-    "afterMCPExecution": [ { "command": "node ~/.cursor/plugins/local/agentmemory/scripts/cursor-hook.mjs" } ],
-    "preCompact": [ { "command": "node ~/.cursor/plugins/local/agentmemory/scripts/cursor-hook.mjs" } ],
-    "subagentStart": [ { "command": "node ~/.cursor/plugins/local/agentmemory/scripts/cursor-hook.mjs" } ],
-    "subagentStop": [ { "command": "node ~/.cursor/plugins/local/agentmemory/scripts/cursor-hook.mjs" } ],
-    "stop": [ { "command": "node ~/.cursor/plugins/local/agentmemory/scripts/cursor-hook.mjs" } ],
-    "sessionEnd": [ { "command": "node ~/.cursor/plugins/local/agentmemory/scripts/cursor-hook.mjs" } ]
+    "postToolUseFailure": [ { "command": "node \"${CURSOR_PLUGIN_ROOT}/scripts/cursor-hook-bootstrap.mjs\"" } ],
+    "afterFileEdit": [ { "command": "node \"${CURSOR_PLUGIN_ROOT}/scripts/cursor-hook-bootstrap.mjs\"" } ],
+    "afterShellExecution": [ { "command": "node \"${CURSOR_PLUGIN_ROOT}/scripts/cursor-hook-bootstrap.mjs\"" } ],
+    "afterMCPExecution": [ { "command": "node \"${CURSOR_PLUGIN_ROOT}/scripts/cursor-hook-bootstrap.mjs\"" } ],
+    "preCompact": [ { "command": "node \"${CURSOR_PLUGIN_ROOT}/scripts/cursor-hook-bootstrap.mjs\"" } ],
+    "subagentStart": [ { "command": "node \"${CURSOR_PLUGIN_ROOT}/scripts/cursor-hook-bootstrap.mjs\"" } ],
+    "subagentStop": [ { "command": "node \"${CURSOR_PLUGIN_ROOT}/scripts/cursor-hook-bootstrap.mjs\"" } ],
+    "stop": [ { "command": "node \"${CURSOR_PLUGIN_ROOT}/scripts/cursor-hook-bootstrap.mjs\"" } ],
+    "sessionEnd": [ { "command": "node \"${CURSOR_PLUGIN_ROOT}/scripts/cursor-hook-bootstrap.mjs\"" } ]
   }
 }
