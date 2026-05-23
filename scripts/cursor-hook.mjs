@@ -9,6 +9,7 @@ import {
 	authHeaders,
 	extractImageData,
 	hookEventName,
+	hookLog,
 	isSdkChildContext,
 	observeBase,
 	postObserve,
@@ -35,6 +36,7 @@ const ENRICH_TOOLS = new Set([
 ]);
 
 async function handleSessionStart(payload) {
+	hookLog("handler", "sessionStart");
 	const base = observeBase(payload);
 	await postSessionStart(
 		{
@@ -47,6 +49,11 @@ async function handleSessionStart(payload) {
 }
 
 async function handleBeforeSubmitPrompt(payload) {
+	hookLog(
+		"handler",
+		"beforeSubmitPrompt",
+		`promptLen=${(payload.prompt || "").length}`,
+	);
 	const base = observeBase(payload);
 	await postObserve({
 		hookType: "prompt_submit",
@@ -59,10 +66,17 @@ async function handleBeforeSubmitPrompt(payload) {
 }
 
 async function handlePreToolUse(payload) {
-	if (!INJECT_CONTEXT) return;
-
 	const toolName = payload.tool_name;
-	if (!toolName || !ENRICH_TOOLS.has(toolName)) return;
+	if (!INJECT_CONTEXT) {
+		hookLog("handler", "preToolUse", toolName ?? "?", "skip (AGENTMEMORY_INJECT_CONTEXT not true)");
+		return;
+	}
+
+	if (!toolName || !ENRICH_TOOLS.has(toolName)) {
+		hookLog("handler", "preToolUse", toolName ?? "?", "skip (tool not enriched)");
+		return;
+	}
+	hookLog("handler", "preToolUse", toolName);
 
 	const toolInput = payload.tool_input || {};
 	const files = [];
@@ -75,7 +89,10 @@ async function handlePreToolUse(payload) {
 		const val = toolInput[key];
 		if (typeof val === "string" && val.length > 0) files.push(val);
 	}
-	if (files.length === 0) return;
+	if (files.length === 0) {
+		hookLog("handler", "preToolUse", toolName, "skip (no file paths in input)");
+		return;
+	}
 
 	const terms = [];
 	if (toolName === "Grep" || toolName === "Glob") {
@@ -98,14 +115,18 @@ async function handlePreToolUse(payload) {
 		});
 		if (res.ok) {
 			const result = await res.json();
+			hookLog("enrich", toolName, res.status, result.context ? "has context" : "no context");
 			if (result.context) process.stdout.write(result.context);
+		} else {
+			hookLog("enrich", toolName, "fail", res.status);
 		}
-	} catch {
-		// ignore
+	} catch (err) {
+		hookLog("enrich", toolName, "error", err?.message ?? err);
 	}
 }
 
 async function handlePostToolUse(payload) {
+	hookLog("handler", "postToolUse", payload.tool_name ?? "?");
 	const base = observeBase(payload);
 	const rawOutput = payload.tool_response ?? payload.tool_output;
 	const { imageData, cleanOutput } = extractImageData(rawOutput);
@@ -128,7 +149,11 @@ async function handlePostToolUse(payload) {
 }
 
 async function handlePostToolUseFailure(payload) {
-	if (payload.is_interrupt) return;
+	if (payload.is_interrupt) {
+		hookLog("handler", "postToolUseFailure", "skip (interrupt)");
+		return;
+	}
+	hookLog("handler", "postToolUseFailure", payload.tool_name ?? "?");
 	const base = observeBase(payload);
 	await postObserve({
 		hookType: "post_tool_failure",
@@ -151,8 +176,9 @@ async function handlePostToolUseFailure(payload) {
 }
 
 async function handleAfterFileEdit(payload) {
-	const base = observeBase(payload);
 	const filePath = payload.file_path || "";
+	hookLog("handler", "afterFileEdit", filePath || "(no path)");
+	const base = observeBase(payload);
 	await postObserve({
 		hookType: "post_tool_use",
 		sessionId: base.sessionId,
@@ -172,6 +198,7 @@ async function handleAfterFileEdit(payload) {
 }
 
 async function handleShellExecution(payload, phase) {
+	hookLog("handler", phase === "before" ? "beforeShellExecution" : "afterShellExecution");
 	const base = observeBase(payload);
 	await postObserve({
 		hookType: "post_tool_use",
@@ -188,6 +215,11 @@ async function handleShellExecution(payload, phase) {
 }
 
 async function handleMcpExecution(payload, phase) {
+	hookLog(
+		"handler",
+		phase === "before" ? "beforeMCPExecution" : "afterMCPExecution",
+		payload.mcp_tool_name ?? payload.mcp_server_name ?? "?",
+	);
 	const base = observeBase(payload);
 	await postObserve({
 		hookType: "post_tool_use",
@@ -286,6 +318,7 @@ async function handleStop(payload) {
 }
 
 async function handleSessionEnd(payload) {
+	hookLog("handler", "sessionEnd");
 	const sid = sessionId(payload);
 	await postSessionEnd(sid);
 
@@ -326,11 +359,26 @@ async function handleSessionEnd(payload) {
 }
 
 async function main() {
+	hookLog("start", `backend=${REST_URL}`, `cwd=${process.cwd()}`);
 	const payload = await readJsonFromStdin();
-	if (!payload || isSdkChildContext(payload)) return;
+	if (!payload) {
+		hookLog("exit", "no stdin payload");
+		return;
+	}
+	if (isSdkChildContext(payload)) {
+		hookLog("exit", "sdk child context");
+		return;
+	}
 
 	const event = hookEventName(payload);
-	if (!event) return;
+	if (!event) {
+		hookLog("exit", "missing hook_event_name");
+		return;
+	}
+
+	const sid = sessionId(payload);
+	const root = projectRoot(payload);
+	hookLog("event", event, `session=${sid.slice(0, 8)}…`, `project=${root}`);
 
 	switch (event) {
 		case "sessionStart":
@@ -379,8 +427,13 @@ async function main() {
 			await handleSessionEnd(payload);
 			break;
 		default:
+			hookLog("handler", event, "no-op (unhandled event)");
 			break;
 	}
+
+	hookLog("done", event);
 }
 
-main();
+main().catch((err) => {
+	hookLog("fatal", err?.message ?? err);
+});

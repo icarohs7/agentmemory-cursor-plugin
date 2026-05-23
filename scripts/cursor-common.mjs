@@ -5,6 +5,15 @@
 export const REST_URL = process.env.AGENTMEMORY_URL || "http://localhost:3111";
 export const SECRET = process.env.AGENTMEMORY_SECRET || "";
 
+/** Set AGENTMEMORY_HOOK_DEBUG=false to silence hook trace logs. */
+const HOOK_DEBUG = process.env.AGENTMEMORY_HOOK_DEBUG !== "false";
+
+/** Logs to stderr so stdout stays free for hook JSON responses. Shows in cursor.hooks log STDERR. */
+export function hookLog(...args) {
+	if (!HOOK_DEBUG) return;
+	console.error("[agentmemory]", ...args);
+}
+
 export function authHeaders() {
 	const h = { "Content-Type": "application/json" };
 	if (SECRET) h.Authorization = `Bearer ${SECRET}`;
@@ -60,14 +69,20 @@ export function hookEventName(payload) {
 
 export async function postObserve(body, timeoutMs = 3000) {
 	try {
-		await fetch(`${REST_URL}/agentmemory/observe`, {
+		const res = await fetch(`${REST_URL}/agentmemory/observe`, {
 			method: "POST",
 			headers: authHeaders(),
 			body: JSON.stringify(body),
 			signal: AbortSignal.timeout(timeoutMs),
 		});
-	} catch {
-		// hooks must never block the host
+		hookLog(
+			"observe",
+			body.hookType,
+			`session=${body.sessionId?.slice(0, 8)}…`,
+			res.ok ? `ok ${res.status}` : `fail ${res.status}`,
+		);
+	} catch (err) {
+		hookLog("observe", body.hookType, "error", err?.message ?? err);
 	}
 }
 
@@ -80,27 +95,40 @@ export async function postSessionStart(body, { inject = false } = {}) {
 			body: JSON.stringify(body),
 			signal: AbortSignal.timeout(timeoutMs),
 		});
+		hookLog(
+			"session/start",
+			`session=${body.sessionId?.slice(0, 8)}…`,
+			`project=${body.project ?? "(none)"}`,
+			res.ok ? `ok ${res.status}` : `fail ${res.status}`,
+			inject ? "inject=true" : "",
+		);
 		if (inject && res.ok) {
 			const data = await res.json();
 			if (typeof data.context === "string" && data.context) {
+				hookLog("session/start", "injected context", `${data.context.length} chars`);
 				process.stdout.write(data.context);
 			}
 		}
-	} catch {
-		// ignore
+	} catch (err) {
+		hookLog("session/start", "error", err?.message ?? err);
 	}
 }
 
 export async function postSessionEnd(sessionId, timeoutMs = 30000) {
 	try {
-		await fetch(`${REST_URL}/agentmemory/session/end`, {
+		const res = await fetch(`${REST_URL}/agentmemory/session/end`, {
 			method: "POST",
 			headers: authHeaders(),
 			body: JSON.stringify({ sessionId }),
 			signal: AbortSignal.timeout(timeoutMs),
 		});
-	} catch {
-		// ignore
+		hookLog(
+			"session/end",
+			`session=${sessionId?.slice(0, 8)}…`,
+			res.ok ? `ok ${res.status}` : `fail ${res.status}`,
+		);
+	} catch (err) {
+		hookLog("session/end", "error", err?.message ?? err);
 	}
 }
 

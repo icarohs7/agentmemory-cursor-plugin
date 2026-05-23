@@ -15,7 +15,12 @@ All events route to `scripts/cursor-hook.mjs`, which dispatches on `hook_event_n
 | `AGENTMEMORY_URL` | Backend URL (default `http://localhost:3111`) |
 | `AGENTMEMORY_SECRET` | Bearer token when required |
 | `AGENTMEMORY_INJECT_CONTEXT=true` | Inject memory context on `sessionStart` and file tools on `preToolUse` |
+| `AGENTMEMORY_HOOK_DEBUG=false` | Turn off `[agentmemory]` trace lines in the hooks log (on by default) |
 | `CONSOLIDATION_ENABLED=true` | Run consolidation on `sessionEnd` |
 | `CLAUDE_MEMORY_BRIDGE=true` | Sync with Claude `MEMORY.md` on compact/end |
 
 After editing hooks, reload the Cursor window.
+
+## Debug traces
+
+Hook scripts log to **stderr** as `[agentmemory] …` so stdout stays free for hook JSON. View them in the latest `cursor.hooks.*.log` under `%APPDATA%\Cursor\logs\<session>\...\output_...\` in the **STDERR** section for each hook run.
