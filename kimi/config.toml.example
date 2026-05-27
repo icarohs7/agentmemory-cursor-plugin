@@ -1,0 +1,67 @@
+# Copy into ~/.kimi/config.toml (or a project config via --config-file).
+# Requires agentmemory backend (default http://localhost:3111).
+#
+# Replace PLUGIN_ROOT with the absolute path to this repository, for example:
+#   ~/src/agentmemory-cursor-plugin
+#   C:/dev/agentmemory-cursor-plugin
+#
+# Unix / macOS / Git Bash on Windows:
+#   command = "bash PLUGIN_ROOT/kimi/run-hook.sh"
+#
+# Windows PowerShell:
+#   command = "pwsh -NoProfile -File PLUGIN_ROOT/kimi/run-hook.ps1"
+#
+# Project-local alternative (repo cloned at .kimi/agentmemory-cursor-plugin in your project):
+#   command = "bash .kimi/agentmemory-cursor-plugin/kimi/run-hook.sh"
+
+[[hooks]]
+event = "SessionStart"
+command = "bash PLUGIN_ROOT/kimi/run-hook.sh"
+timeout = 15
+
+[[hooks]]
+event = "UserPromptSubmit"
+command = "bash PLUGIN_ROOT/kimi/run-hook.sh"
+timeout = 15
+
+[[hooks]]
+event = "PreToolUse"
+matcher = "Shell|ReadFile|WriteFile|StrReplaceFile|EditFile|Grep|Glob|Task|WebFetch|WebSearch"
+command = "bash PLUGIN_ROOT/kimi/run-hook.sh"
+timeout = 15
+
+[[hooks]]
+event = "PostToolUse"
+matcher = ".*"
+command = "bash PLUGIN_ROOT/kimi/run-hook.sh"
+timeout = 15
+
+[[hooks]]
+event = "PostToolUseFailure"
+command = "bash PLUGIN_ROOT/kimi/run-hook.sh"
+timeout = 15
+
+[[hooks]]
+event = "PreCompact"
+command = "bash PLUGIN_ROOT/kimi/run-hook.sh"
+timeout = 30
+
+[[hooks]]
+event = "SubagentStart"
+command = "bash PLUGIN_ROOT/kimi/run-hook.sh"
+timeout = 15
+
+[[hooks]]
+event = "SubagentStop"
+command = "bash PLUGIN_ROOT/kimi/run-hook.sh"
+timeout = 15
+
+[[hooks]]
+event = "Stop"
+command = "bash PLUGIN_ROOT/kimi/run-hook.sh"
+timeout = 60
+
+[[hooks]]
+event = "SessionEnd"
+command = "bash PLUGIN_ROOT/kimi/run-hook.sh"
+timeout = 60

@@ -28,6 +28,10 @@ Default backend URL: `http://localhost:3111` (override with `AGENTMEMORY_URL`).
 
 See [hooks/README.md](hooks/README.md) for hook events and environment variables (`AGENTMEMORY_SECRET`, `AGENTMEMORY_INJECT_CONTEXT`, `AGENTMEMORY_HOOK_DEBUG`, etc.).
 
+## Kimi Code CLI
+
+For [Kimi Code CLI](https://www.kimi.com/code/docs/en/kimi-code-cli/customization/hooks.html), use the adapter in [kimi/](kimi/) and [kimi/config.toml.example](kimi/config.toml.example) (replace `PLUGIN_ROOT` with your clone path; no machine-specific paths are committed).
+
 ## License
 
 Licensed under the Apache License 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
