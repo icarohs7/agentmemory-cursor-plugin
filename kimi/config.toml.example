@@ -65,3 +65,10 @@ timeout = 60
 event = "SessionEnd"
 command = "bash PLUGIN_ROOT/kimi/run-hook.sh"
 timeout = 60
+
+# Optional: permission prompts → agentmemory notification observe
+# [[hooks]]
+# event = "Notification"
+# matcher = "permission_prompt"
+# command = "bash PLUGIN_ROOT/kimi/run-hook.sh"
+# timeout = 15

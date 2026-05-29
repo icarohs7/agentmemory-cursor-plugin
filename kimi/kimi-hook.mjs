@@ -2,6 +2,9 @@
 /**
  * Kimi Code CLI → agentmemory adapter.
  * Reads Kimi hook JSON from stdin, normalizes event/tool names for cursor-hook.mjs, then runs it.
+ *
+ * Tool names: only Kimi-specific renames here. cursor-hook.mjs lowercases tool names
+ * for enrich eligibility (Read/Write/Grep/…); identity names (Shell, Grep, Task) pass through.
  */
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -27,18 +30,12 @@ const EVENT_MAP = {
 	TaskCompleted: "taskCompleted",
 };
 
-/** Kimi tool names → Cursor tool names (for enrich / observe). */
-const TOOL_MAP = {
+/** Kimi file-tool names → names used by cursor-hook / Cursor matchers */
+const KIMI_TOOL_RENAMES = {
 	ReadFile: "Read",
 	WriteFile: "Write",
 	StrReplaceFile: "Write",
 	EditFile: "Write",
-	Grep: "Grep",
-	Glob: "Glob",
-	Shell: "Shell",
-	Task: "Task",
-	WebFetch: "WebFetch",
-	WebSearch: "WebSearch",
 };
 
 function hookLog(...args) {
@@ -57,7 +54,32 @@ function readStdinSync() {
 
 function normalizeToolName(name) {
 	if (typeof name !== "string" || !name) return name;
-	return TOOL_MAP[name] ?? name;
+	return KIMI_TOOL_RENAMES[name] ?? name;
+}
+
+/** Map Kimi payload fields to shapes cursor-hook.mjs already accepts. */
+function normalizeFieldAliases(payload) {
+	if (payload.tool_output != null && payload.tool_response == null) {
+		payload.tool_response = payload.tool_output;
+	}
+	if (payload.prompt != null && payload.userPrompt == null) {
+		payload.userPrompt = payload.prompt;
+	}
+	if (payload.body != null && payload.message == null) {
+		payload.message = payload.body;
+	}
+	const agentName = payload.agent_name;
+	if (typeof agentName === "string" && agentName) {
+		if (!payload.agent_id && !payload.agentId) payload.agentId = agentName;
+		if (!payload.agentName) payload.agentName = agentName;
+	}
+	const response = payload.response;
+	if (typeof response === "string" && response) {
+		if (!payload.last_assistant_message && !payload.lastAssistantMessage) {
+			payload.lastAssistantMessage = response;
+		}
+		if (payload.result == null) payload.result = response;
+	}
 }
 
 function normalizePayload(raw) {
@@ -82,13 +104,13 @@ function normalizePayload(raw) {
 	}
 
 	payload.hook_event_name = cursorEvent;
+	normalizeFieldAliases(payload);
 
 	if (typeof payload.tool_name === "string") {
 		payload.tool_name = normalizeToolName(payload.tool_name);
 	}
-
-	if (payload.tool_output != null && payload.tool_response == null) {
-		payload.tool_response = payload.tool_output;
+	if (typeof payload.toolName === "string") {
+		payload.toolName = normalizeToolName(payload.toolName);
 	}
 
 	return JSON.stringify(payload);
