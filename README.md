@@ -43,6 +43,10 @@ See [hooks/README.md](hooks/README.md) for hook events, fire-and-forget behavior
 
 For [Kimi Code CLI](https://www.kimi.com/code/docs/en/kimi-code-cli/customization/hooks.html), use the adapter in [kimi/](kimi/) and [kimi/config.toml.example](kimi/config.toml.example) (replace `PLUGIN_ROOT` with your clone path; no machine-specific paths are committed).
 
+## Upstream sync playbook
+
+When [rohitg00/agentmemory](https://github.com/rohitg00/agentmemory) releases hook changes, use [.memory/plan.md](.memory/plan.md) and [.memory/progress.md](.memory/progress.md) as the checklist template (completed v0.9.24 port, commits `7296392`–`244e276`).
+
 ## License
 
 Licensed under the Apache License 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
