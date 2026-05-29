@@ -13,7 +13,6 @@ import {
 	isSdkChildContext,
 	observeBase,
 	observeFireAndForget,
-	postObserve,
 	postSessionEnd,
 	postSessionStart,
 	projectRoot,
@@ -197,11 +196,11 @@ async function handlePostToolUseFailure(payload) {
 	});
 }
 
-async function handleAfterFileEdit(payload) {
-	const filePath = payload.file_path || "";
+function handleAfterFileEdit(payload) {
+	const filePath = payload.file_path ?? payload.filePath ?? "";
 	hookLog("handler", "afterFileEdit", filePath || "(no path)");
 	const base = observeBase(payload);
-	await postObserve({
+	observeFireAndForget({
 		hookType: "post_tool_use",
 		sessionId: base.sessionId,
 		project: base.project,
@@ -211,18 +210,18 @@ async function handleAfterFileEdit(payload) {
 			tool_name: "CursorEdit",
 			tool_input: {
 				file_path: filePath,
-				old_content: payload.old_content,
-				new_content: payload.new_content,
+				old_content: payload.old_content ?? payload.oldContent,
+				new_content: payload.new_content ?? payload.newContent,
 			},
 			tool_output: filePath ? `Edited ${filePath}` : "file edited",
 		},
 	});
 }
 
-async function handleShellExecution(payload, phase) {
+function handleShellExecution(payload, phase) {
 	hookLog("handler", phase === "before" ? "beforeShellExecution" : "afterShellExecution");
 	const base = observeBase(payload);
-	await postObserve({
+	observeFireAndForget({
 		hookType: "post_tool_use",
 		sessionId: base.sessionId,
 		project: base.project,
@@ -230,29 +229,36 @@ async function handleShellExecution(payload, phase) {
 		timestamp: base.timestamp,
 		data: {
 			tool_name: "Shell",
-			tool_input: { command: payload.command || "", phase },
+			tool_input: { command: payload.command ?? "", phase },
 			tool_output: payload.output ?? payload.reason ?? "shell execution",
 		},
 	});
 }
 
-async function handleMcpExecution(payload, phase) {
+function handleMcpExecution(payload, phase) {
+	const toolName =
+		payload.mcp_tool_name ??
+		payload.mcpToolName ??
+		payload.mcp_server_name ??
+		payload.mcpServerName ??
+		"MCP";
 	hookLog(
 		"handler",
 		phase === "before" ? "beforeMCPExecution" : "afterMCPExecution",
-		payload.mcp_tool_name ?? payload.mcp_server_name ?? "?",
+		toolName,
 	);
 	const base = observeBase(payload);
-	await postObserve({
+	observeFireAndForget({
 		hookType: "post_tool_use",
 		sessionId: base.sessionId,
 		project: base.project,
 		cwd: base.cwd,
 		timestamp: base.timestamp,
 		data: {
-			tool_name: payload.mcp_tool_name || payload.mcp_server_name || "MCP",
-			tool_input: payload.mcp_tool_input || {},
-			tool_output: payload.mcp_tool_output ?? "MCP execution",
+			tool_name: toolName,
+			tool_input: payload.mcp_tool_input ?? payload.mcpToolInput ?? {},
+			tool_output:
+				payload.mcp_tool_output ?? payload.mcpToolOutput ?? "MCP execution",
 			phase,
 		},
 	});
@@ -292,35 +298,57 @@ async function handlePreCompact(payload) {
 	}
 }
 
-async function handleSubagentStart(payload) {
+function subagentIdentity(payload) {
+	return {
+		agent_id:
+			payload.agent_id ?? payload.agentId ?? payload.agentName,
+		agent_type:
+			payload.agent_type ??
+			payload.agentType ??
+			payload.agentDisplayName ??
+			payload.agentName,
+	};
+}
+
+function handleSubagentStart(payload) {
 	const base = observeBase(payload);
-	await postObserve({
+	const { agent_id, agent_type } = subagentIdentity(payload);
+	const subagentType = payload.subagent_type ?? payload.subagentType;
+	observeFireAndForget({
 		hookType: "subagent_start",
 		sessionId: base.sessionId,
 		project: base.project,
 		cwd: base.cwd,
 		timestamp: base.timestamp,
 		data: {
-			agent_id: payload.agent_id,
-			agent_type: payload.agent_type,
-			subagent_type: payload.subagent_type,
+			agent_id,
+			agent_type,
+			...(subagentType ? { subagent_type: subagentType } : {}),
 		},
 	});
 }
 
-async function handleSubagentStop(payload) {
+function handleSubagentStop(payload) {
 	const base = observeBase(payload);
-	await postObserve({
+	const { agent_id, agent_type } = subagentIdentity(payload);
+	const lastAssistant =
+		payload.last_assistant_message ?? payload.lastAssistantMessage;
+	const lastMsg =
+		typeof lastAssistant === "string" ? lastAssistant.slice(0, 4000) : "";
+	observeFireAndForget({
 		hookType: "subagent_stop",
 		sessionId: base.sessionId,
 		project: base.project,
 		cwd: base.cwd,
 		timestamp: base.timestamp,
 		data: {
-			agent_id: payload.agent_id,
-			agent_type: payload.agent_type,
-			status: payload.status,
-			result: truncate(payload.result, 4000),
+			agent_id,
+			agent_type,
+			last_message: lastMsg,
+			...(payload.status ? { status: payload.status } : {}),
+			...(payload.result != null
+				? { result: truncate(payload.result, 4000) }
+				: {}),
 		},
 	});
 }
@@ -407,28 +435,28 @@ async function main() {
 			await handlePostToolUseFailure(payload);
 			break;
 		case "afterFileEdit":
-			await handleAfterFileEdit(payload);
+			handleAfterFileEdit(payload);
 			break;
 		case "afterShellExecution":
-			await handleShellExecution(payload, "after");
+			handleShellExecution(payload, "after");
 			break;
 		case "beforeShellExecution":
-			await handleShellExecution(payload, "before");
+			handleShellExecution(payload, "before");
 			break;
 		case "afterMCPExecution":
-			await handleMcpExecution(payload, "after");
+			handleMcpExecution(payload, "after");
 			break;
 		case "beforeMCPExecution":
-			await handleMcpExecution(payload, "before");
+			handleMcpExecution(payload, "before");
 			break;
 		case "preCompact":
 			await handlePreCompact(payload);
 			break;
 		case "subagentStart":
-			await handleSubagentStart(payload);
+			handleSubagentStart(payload);
 			break;
 		case "subagentStop":
-			await handleSubagentStop(payload);
+			handleSubagentStop(payload);
 			break;
 		case "stop":
 			handleStop(payload);
