@@ -23,6 +23,8 @@ const EVENT_MAP = {
 	SubagentStart: "subagentStart",
 	SubagentStop: "subagentStop",
 	Stop: "stop",
+	Notification: "notification",
+	TaskCompleted: "taskCompleted",
 };
 
 /** Kimi tool names → Cursor tool names (for enrich / observe). */

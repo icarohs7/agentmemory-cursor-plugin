@@ -353,6 +353,55 @@ function handleSubagentStop(payload) {
 	});
 }
 
+function handleNotification(payload) {
+	const notificationType =
+		payload.notification_type ?? payload.notificationType;
+	if (notificationType !== "permission_prompt") {
+		hookLog(
+			"handler",
+			"notification",
+			"skip",
+			notificationType ?? "(missing)",
+		);
+		return;
+	}
+	hookLog("handler", "notification", notificationType);
+	const base = observeBase(payload);
+	observeFireAndForget({
+		hookType: "notification",
+		sessionId: base.sessionId,
+		project: base.project,
+		cwd: base.cwd,
+		timestamp: base.timestamp,
+		data: {
+			notification_type: notificationType,
+			title: payload.title,
+			message: payload.message,
+		},
+	});
+}
+
+function handleTaskCompleted(payload) {
+	hookLog("handler", "taskCompleted");
+	const base = observeBase(payload);
+	const description = payload.task_description ?? payload.taskDescription;
+	observeFireAndForget({
+		hookType: "task_completed",
+		sessionId: base.sessionId,
+		project: base.project,
+		cwd: base.cwd,
+		timestamp: base.timestamp,
+		data: {
+			task_id: payload.task_id ?? payload.taskId,
+			task_subject: payload.task_subject ?? payload.taskSubject,
+			task_description:
+				typeof description === "string" ? description.slice(0, 2000) : "",
+			teammate_name: payload.teammate_name ?? payload.teammateName,
+			team_name: payload.team_name ?? payload.teamName,
+		},
+	});
+}
+
 function handleStop(payload) {
 	hookLog("handler", "stop");
 	const sid = sessionId(payload);
@@ -457,6 +506,12 @@ async function main() {
 			break;
 		case "subagentStop":
 			handleSubagentStop(payload);
+			break;
+		case "notification":
+			handleNotification(payload);
+			break;
+		case "taskCompleted":
+			handleTaskCompleted(payload);
 			break;
 		case "stop":
 			handleStop(payload);

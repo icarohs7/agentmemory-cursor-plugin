@@ -6,6 +6,17 @@ All events route to `scripts/cursor-hook-bootstrap.mjs`, which on Windows reads 
 
 On Windows, Cursor 3.5.x often does not pipe hook JSON to Node on stdin; the bootstrap and temp-file fallback in `cursor-common.mjs` address that.
 
+## Claude-only events (handlers ready, not in `hooks.json`)
+
+[Cursor’s hook list](https://cursor.com/docs/agent/hooks) does not include `notification` or `taskCompleted` ([third-party mapping](https://cursor.com/docs/reference/third-party-hooks): Claude `Notification` and `TaskCompleted` are unsupported). `cursor-hook.mjs` still implements them for Kimi (`kimi/kimi-hook.mjs`) or if Cursor adds these events later:
+
+| Event | Behavior |
+|-------|----------|
+| `notification` | Observes only `permission_prompt` (`notification_type` or `notificationType`) → `hookType: "notification"` |
+| `taskCompleted` | Task metadata → `hookType: "task_completed"` |
+
+Do not add these keys to `hooks.json` until Cursor documents them; task completion in Cursor is covered by the `stop` hook (with `status`).
+
 ## Claude Code format (backup)
 
 `hooks.claude.json` is the previous Claude Code marketplace layout. Keep it for reference or if you copy this plugin back to Claude Code; Cursor should use `hooks.json` only.
