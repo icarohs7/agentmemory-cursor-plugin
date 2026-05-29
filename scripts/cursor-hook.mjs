@@ -277,9 +277,9 @@ async function handlePreCompact(payload) {
 			body: JSON.stringify({
 				sessionId: base.sessionId,
 				project: base.project,
-				cwd: base.cwd,
+				budget: 1500,
 			}),
-			signal: AbortSignal.timeout(3000),
+			signal: AbortSignal.timeout(5000),
 		});
 		if (res.ok) {
 			const result = await res.json();
