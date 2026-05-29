@@ -26,15 +26,19 @@ import {
 
 const INJECT_CONTEXT = process.env.AGENTMEMORY_INJECT_CONTEXT === "true";
 
-/** Cursor tool names that support pre-tool enrich (file-oriented tools). */
-const ENRICH_TOOLS = new Set([
-	"Read",
-	"Write",
-	"Grep",
-	"Glob",
-	"Task",
-	"WebFetch",
-	"WebSearch",
+/** File-oriented tools eligible for pre-tool enrich (lowercase; includes Cursor names). */
+const ENRICH_FILE_TOOLS = new Set([
+	"edit",
+	"write",
+	"create",
+	"read",
+	"view",
+	"glob",
+	"grep",
+	"task",
+	"shell",
+	"webfetch",
+	"websearch",
 ]);
 
 async function handleSessionStart(payload) {
@@ -65,23 +69,35 @@ async function handleBeforeSubmitPrompt(payload) {
 }
 
 async function handlePreToolUse(payload) {
-	const toolName = payload.tool_name;
-	if (!INJECT_CONTEXT) {
-		hookLog("handler", "preToolUse", toolName ?? "?", "skip (AGENTMEMORY_INJECT_CONTEXT not true)");
-		return;
-	}
+	if (!INJECT_CONTEXT) return;
 
-	if (!toolName || !ENRICH_TOOLS.has(toolName)) {
-		hookLog("handler", "preToolUse", toolName ?? "?", "skip (tool not enriched)");
+	const toolName =
+		typeof payload.tool_name === "string"
+			? payload.tool_name
+			: typeof payload.toolName === "string"
+				? payload.toolName
+				: undefined;
+	if (!toolName) return;
+
+	const normalizedToolName = toolName.toLowerCase();
+	if (!ENRICH_FILE_TOOLS.has(normalizedToolName)) {
+		hookLog("handler", "preToolUse", toolName, "skip (tool not enriched)");
 		return;
 	}
 	hookLog("handler", "preToolUse", toolName);
 
-	const toolInput = payload.tool_input || {};
+	const rawToolInput = payload.tool_input ?? payload.toolArgs;
+	const toolInput =
+		typeof rawToolInput === "object" &&
+		rawToolInput !== null &&
+		!Array.isArray(rawToolInput)
+			? rawToolInput
+			: {};
+
 	const files = [];
 	const fileKeys =
-		toolName === "Grep"
-			? ["path", "file", "file_path"]
+		normalizedToolName === "grep"
+			? ["path", "file"]
 			: ["file_path", "path", "file", "pattern", "target_directory"];
 
 	for (const key of fileKeys) {
@@ -94,7 +110,7 @@ async function handlePreToolUse(payload) {
 	}
 
 	const terms = [];
-	if (toolName === "Grep" || toolName === "Glob") {
+	if (normalizedToolName === "grep" || normalizedToolName === "glob") {
 		const pattern = toolInput.pattern;
 		if (typeof pattern === "string" && pattern.length > 0) terms.push(pattern);
 	}
@@ -109,6 +125,7 @@ async function handlePreToolUse(payload) {
 				files,
 				terms,
 				toolName,
+				project: base.project,
 			}),
 			signal: AbortSignal.timeout(2000),
 		});
