@@ -159,6 +159,39 @@ export async function postObserve(body, timeoutMs = 3000) {
 	}
 }
 
+/**
+ * Telemetry observe without blocking the hook process (upstream #688).
+ * Callers migrate from postObserve in later plan steps.
+ *
+ * @param {object} body — same shape as postObserve
+ * @param {{ timeoutMs?: number, exitMs?: number }} [options]
+ * @param {number} [options.timeoutMs=3000]
+ * @param {number} [options.exitMs=500] — ms before process.exit(0); set 0 to skip exit
+ */
+export function observeFireAndForget(body, { timeoutMs = 3000, exitMs = 500 } = {}) {
+	fetch(`${REST_URL}/agentmemory/observe`, {
+		method: "POST",
+		headers: authHeaders(),
+		body: JSON.stringify(body),
+		signal: AbortSignal.timeout(timeoutMs),
+	})
+		.then((res) => {
+			hookLog(
+				"observe",
+				body.hookType,
+				`session=${body.sessionId?.slice(0, 8)}…`,
+				res.ok ? `ok ${res.status}` : `fail ${res.status}`,
+			);
+		})
+		.catch((err) => {
+			hookLog("observe", body.hookType, "error", err?.message ?? err);
+		});
+
+	if (exitMs > 0) {
+		setTimeout(() => process.exit(0), exitMs).unref();
+	}
+}
+
 export async function postSessionStart(body, { inject = false } = {}) {
 	const timeoutMs = inject ? 1500 : 800;
 	try {
