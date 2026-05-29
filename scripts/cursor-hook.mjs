@@ -149,28 +149,31 @@ async function handlePostToolUse(payload) {
 }
 
 async function handlePostToolUseFailure(payload) {
-	if (payload.is_interrupt) {
+	if (payload.is_interrupt || payload.isInterrupt) {
 		hookLog("handler", "postToolUseFailure", "skip (interrupt)");
 		return;
 	}
-	hookLog("handler", "postToolUseFailure", payload.tool_name ?? "?");
+	const toolName = payload.tool_name ?? payload.toolName;
+	hookLog("handler", "postToolUseFailure", toolName ?? "?");
 	const base = observeBase(payload);
-	await postObserve({
+	const toolInput = payload.tool_input ?? payload.toolArgs;
+	const err = payload.error ?? payload.errorMessage;
+	observeFireAndForget({
 		hookType: "post_tool_failure",
 		sessionId: base.sessionId,
 		project: base.project,
 		cwd: base.cwd,
 		timestamp: base.timestamp,
 		data: {
-			tool_name: payload.tool_name,
+			tool_name: toolName,
 			tool_input:
-				typeof payload.tool_input === "string"
-					? payload.tool_input.slice(0, 4000)
-					: JSON.stringify(payload.tool_input ?? "").slice(0, 4000),
+				typeof toolInput === "string"
+					? toolInput.slice(0, 4000)
+					: JSON.stringify(toolInput ?? "").slice(0, 4000),
 			error:
-				typeof payload.error === "string"
-					? payload.error.slice(0, 4000)
-					: JSON.stringify(payload.error ?? "").slice(0, 4000),
+				typeof err === "string"
+					? err.slice(0, 4000)
+					: JSON.stringify(err ?? "").slice(0, 4000),
 		},
 	});
 }
