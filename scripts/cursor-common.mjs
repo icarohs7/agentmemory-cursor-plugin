@@ -109,10 +109,11 @@ export function isSdkChildContext(payload) {
 	return payload.entrypoint === "sdk-ts";
 }
 
-/** Cursor sends conversation_id; older payloads may use session_id only. */
+/** session_id, sessionId (upstream/Copilot), or conversation_id (Cursor). */
 export function sessionId(payload) {
 	return (
 		payload.session_id ||
+		payload.sessionId ||
 		payload.conversation_id ||
 		`cursor-${Date.now().toString(36)}`
 	);
