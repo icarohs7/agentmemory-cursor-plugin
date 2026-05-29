@@ -18,7 +18,9 @@ import {
 	postSessionStart,
 	projectRoot,
 	readJsonFromStdin,
+	restFireAndForget,
 	REST_URL,
+	scheduleHookExit,
 	sessionId,
 	toolOutput,
 	truncate,
@@ -323,59 +325,47 @@ async function handleSubagentStop(payload) {
 	});
 }
 
-async function handleStop(payload) {
+function handleStop(payload) {
+	hookLog("handler", "stop");
 	const sid = sessionId(payload);
-	try {
-		await fetch(`${REST_URL}/agentmemory/summarize`, {
-			method: "POST",
-			headers: authHeaders(),
-			body: JSON.stringify({ sessionId: sid }),
-			signal: AbortSignal.timeout(120000),
-		});
-	} catch {
-		// ignore
-	}
+	// Option B: summarize only on stop; /session/end runs on sessionEnd (upstream split).
+	restFireAndForget(
+		"/agentmemory/summarize",
+		{ sessionId: sid },
+		{
+			timeoutMs: 120000,
+			logLabel: `summarize session=${sid.slice(0, 8)}…`,
+		},
+	);
+	scheduleHookExit(500);
 }
 
-async function handleSessionEnd(payload) {
+function handleSessionEnd(payload) {
 	hookLog("handler", "sessionEnd");
 	const sid = sessionId(payload);
-	await postSessionEnd(sid);
+	postSessionEnd(sid);
 
 	if (process.env.CONSOLIDATION_ENABLED === "true") {
-		try {
-			await fetch(`${REST_URL}/agentmemory/crystals/auto`, {
-				method: "POST",
-				headers: authHeaders(),
-				body: JSON.stringify({ olderThanDays: 0 }),
-				signal: AbortSignal.timeout(60000),
-			});
-		} catch {
-			// ignore
-		}
-		try {
-			await fetch(`${REST_URL}/agentmemory/consolidate-pipeline`, {
-				method: "POST",
-				headers: authHeaders(),
-				body: JSON.stringify({ tier: "all", force: true }),
-				signal: AbortSignal.timeout(120000),
-			});
-		} catch {
-			// ignore
-		}
+		restFireAndForget(
+			"/agentmemory/crystals/auto",
+			{ olderThanDays: 0 },
+			{ timeoutMs: 60000, logLabel: "crystals/auto" },
+		);
+		restFireAndForget(
+			"/agentmemory/consolidate-pipeline",
+			{ tier: "all", force: true },
+			{ timeoutMs: 120000, logLabel: "consolidate-pipeline" },
+		);
 	}
 
 	if (process.env.CLAUDE_MEMORY_BRIDGE === "true") {
-		try {
-			await fetch(`${REST_URL}/agentmemory/claude-bridge/sync`, {
-				method: "POST",
-				headers: authHeaders(),
-				signal: AbortSignal.timeout(30000),
-			});
-		} catch {
-			// ignore
-		}
+		restFireAndForget("/agentmemory/claude-bridge/sync", undefined, {
+			timeoutMs: 30000,
+			logLabel: "claude-bridge/sync",
+		});
 	}
+
+	scheduleHookExit(1500);
 }
 
 async function main() {
@@ -441,10 +431,10 @@ async function main() {
 			await handleSubagentStop(payload);
 			break;
 		case "stop":
-			await handleStop(payload);
+			handleStop(payload);
 			break;
 		case "sessionEnd":
-			await handleSessionEnd(payload);
+			handleSessionEnd(payload);
 			break;
 		default:
 			hookLog("handler", event, "no-op (unhandled event)");

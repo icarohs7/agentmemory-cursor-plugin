@@ -188,6 +188,40 @@ export function observeFireAndForget(body, { timeoutMs = 3000, exitMs = 500 } = 
 		});
 
 	if (exitMs > 0) {
+		scheduleHookExit(exitMs);
+	}
+}
+
+/**
+ * POST to agentmemory REST without blocking the hook process.
+ *
+ * @param {string} path — e.g. "/agentmemory/summarize"
+ * @param {object} [body]
+ * @param {{ timeoutMs?: number, logLabel?: string }} [options]
+ */
+export function restFireAndForget(path, body, { timeoutMs = 3000, logLabel } = {}) {
+	const label = logLabel ?? path;
+	const init = {
+		method: "POST",
+		headers: authHeaders(),
+		signal: AbortSignal.timeout(timeoutMs),
+	};
+	if (body !== undefined) {
+		init.body = JSON.stringify(body);
+	}
+
+	fetch(`${REST_URL}${path}`, init)
+		.then((res) => {
+			hookLog(label, res.ok ? `ok ${res.status}` : `fail ${res.status}`);
+		})
+		.catch((err) => {
+			hookLog(label, "error", err?.message ?? err);
+		});
+}
+
+/** Exit hook process after ms so Cursor does not wait on long-running fetches. */
+export function scheduleHookExit(exitMs) {
+	if (exitMs > 0) {
 		setTimeout(() => process.exit(0), exitMs).unref();
 	}
 }
@@ -243,22 +277,15 @@ export async function postSessionStart(body, { inject = false } = {}) {
 	}
 }
 
-export async function postSessionEnd(sessionId, timeoutMs = 30000) {
-	try {
-		const res = await fetch(`${REST_URL}/agentmemory/session/end`, {
-			method: "POST",
-			headers: authHeaders(),
-			body: JSON.stringify({ sessionId }),
-			signal: AbortSignal.timeout(timeoutMs),
-		});
-		hookLog(
-			"session/end",
-			`session=${sessionId?.slice(0, 8)}…`,
-			res.ok ? `ok ${res.status}` : `fail ${res.status}`,
-		);
-	} catch (err) {
-		hookLog("session/end", "error", err?.message ?? err);
-	}
+export function postSessionEnd(sessionId, timeoutMs = 30000) {
+	restFireAndForget(
+		"/agentmemory/session/end",
+		{ sessionId },
+		{
+			timeoutMs,
+			logLabel: `session/end session=${sessionId?.slice(0, 8)}…`,
+		},
+	);
 }
 
 export function truncate(value, max) {
