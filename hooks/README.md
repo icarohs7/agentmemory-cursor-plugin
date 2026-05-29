@@ -6,7 +6,7 @@ All events route to `scripts/cursor-hook-bootstrap.mjs`, which on Windows reads 
 
 On Windows, Cursor 3.5.x often does not pipe hook JSON to Node on stdin; the bootstrap and temp-file fallback in `cursor-common.mjs` address that.
 
-**Active implementation:** `scripts/cursor-hook.mjs` + `scripts/cursor-common.mjs` (parity with [upstream agentmemory](https://github.com/rohitg00/agentmemory) ~v0.9.24). Legacy per-event `scripts/*.mjs` bundles are not wired by `hooks.json`.
+**Active implementation:** [`scripts/`](../scripts/) — `cursor-hook-bootstrap.mjs` → `cursor-hook.mjs` + `cursor-common.mjs` (parity with [upstream agentmemory](https://github.com/rohitg00/agentmemory) ~v0.9.24). See [`scripts/README.md`](../scripts/README.md).
 
 ## Project scoping (`resolveProject`)
 
