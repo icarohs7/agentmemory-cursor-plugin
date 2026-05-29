@@ -20,6 +20,7 @@ import {
 	readJsonFromStdin,
 	REST_URL,
 	sessionId,
+	toolOutput,
 	truncate,
 } from "./cursor-common.mjs";
 
@@ -124,20 +125,21 @@ async function handlePreToolUse(payload) {
 }
 
 async function handlePostToolUse(payload) {
-	hookLog("handler", "postToolUse", payload.tool_name ?? "?");
+	const toolName = payload.tool_name ?? payload.toolName;
+	hookLog("handler", "postToolUse", toolName ?? "?");
 	const base = observeBase(payload);
-	const rawOutput = payload.tool_response ?? payload.tool_output;
+	const rawOutput = toolOutput(payload);
 	const { imageData, cleanOutput } = extractImageData(rawOutput);
 
-	await postObserve({
+	observeFireAndForget({
 		hookType: "post_tool_use",
 		sessionId: base.sessionId,
 		project: base.project,
 		cwd: base.cwd,
 		timestamp: base.timestamp,
 		data: {
-			tool_name: payload.tool_name,
-			tool_input: payload.tool_input,
+			tool_name: toolName,
+			tool_input: payload.tool_input ?? payload.toolArgs,
 			tool_output: truncate(cleanOutput, 8000),
 			duration: payload.duration,
 			tool_use_id: payload.tool_use_id,

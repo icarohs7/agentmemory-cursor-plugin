@@ -282,6 +282,22 @@ function isBase64Image(val) {
 	);
 }
 
+
+/** Resolve tool result from Cursor / Copilot / Claude payload shapes. */
+export function toolOutput(payload) {
+	if (payload.tool_response !== undefined) return payload.tool_response;
+	if (payload.tool_output !== undefined) return payload.tool_output;
+	const result = payload.tool_result ?? payload.toolResult;
+	if (typeof result === "object" && result !== null) {
+		return (
+			result.text_result_for_llm ??
+			result.textResultForLlm ??
+			result
+		);
+	}
+	return result;
+}
+
 export function extractImageData(output) {
 	if (isBase64Image(output)) {
 		return { imageData: output, cleanOutput: "[image data extracted]" };
