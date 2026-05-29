@@ -4,7 +4,7 @@ Cursor IDE plugin (hooks + skills) for [**agentmemory**](https://github.com/rohi
 
 This repository is **not** the core agentmemory server. It is a **derivative adaptation** of the upstream project’s hook/skill integration, focused on:
 
-- **Cursor-native hooks** (`sessionStart`, `beforeSubmitPrompt`, `postToolUse`, `afterFileEdit`, shell/MCP events, etc.)
+- **Cursor-native hooks** (`sessionStart`, `beforeSubmitPrompt`, `postToolUse`, `afterFileEdit`, shell/MCP events, etc.) with behavior aligned to upstream **v0.9.24** (project basename scoping, fire-and-forget telemetry, split stop/sessionEnd lifecycle)
 - **Windows reliability** — hook JSON delivery when Cursor does not pipe stdin to Node (bootstrap + temp-file fallback)
 
 ## Credits
@@ -15,7 +15,9 @@ This repository is **not** the core agentmemory server. It is a **derivative ada
 | **License** | [Apache-2.0](LICENSE) (same as upstream) |
 | **This adaptation** | Maintained by [Icaro Temponi](https://github.com/icarohs7) — Cursor/Windows hook layer only |
 
-Hook scripts and skills here are based on upstream agentmemory v0.9.x plugin material. Please use, star, and contribute to the **original** project for the memory engine, MCP server, and core features.
+Hook scripts and skills here are based on upstream agentmemory **v0.9.24** plugin behavior (single entrypoint: `scripts/cursor-hook.mjs`). Please use, star, and contribute to the **original** project for the memory engine, MCP server, and core features.
+
+**Plugin version:** `0.9.24` (see `.cursor-plugin/plugin.json`) tracks upstream hook semantics, not the core server release cadence.
 
 ## Requirements
 
@@ -26,7 +28,16 @@ Default backend URL: `http://localhost:3111` (override with `AGENTMEMORY_URL`).
 
 ## Configuration
 
-See [hooks/README.md](hooks/README.md) for hook events and environment variables (`AGENTMEMORY_SECRET`, `AGENTMEMORY_INJECT_CONTEXT`, `AGENTMEMORY_HOOK_DEBUG`, etc.).
+See [hooks/README.md](hooks/README.md) for hook events, fire-and-forget behavior, `resolveProject` / `project` vs `cwd`, and environment variables.
+
+| Variable | Default | Notes |
+|----------|---------|--------|
+| `AGENTMEMORY_URL` | `http://localhost:3111` | Backend base URL |
+| `AGENTMEMORY_INJECT_CONTEXT` | **off** | Set `true` for session + pre-tool memory injection |
+| `AGENTMEMORY_PROJECT_NAME` | (git basename) | Override project key for observes |
+| `AGENTMEMORY_HOOK_DEBUG` | on | Set `false` to silence `[agentmemory]` stderr traces |
+| `CONSOLIDATION_ENABLED` | off | `true` runs consolidation on `sessionEnd` |
+| `CLAUDE_MEMORY_BRIDGE` | off | `true` syncs bridge on compact/end |
 
 ## Kimi Code CLI
 
