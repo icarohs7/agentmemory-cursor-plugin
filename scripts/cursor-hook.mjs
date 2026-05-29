@@ -12,6 +12,7 @@ import {
 	hookLog,
 	isSdkChildContext,
 	observeBase,
+	observeFireAndForget,
 	postObserve,
 	postSessionEnd,
 	postSessionStart,
@@ -49,19 +50,16 @@ async function handleSessionStart(payload) {
 }
 
 async function handleBeforeSubmitPrompt(payload) {
-	hookLog(
-		"handler",
-		"beforeSubmitPrompt",
-		`promptLen=${(payload.prompt || "").length}`,
-	);
+	const prompt = payload.prompt ?? payload.userPrompt ?? "";
+	hookLog("handler", "beforeSubmitPrompt", `promptLen=${prompt.length}`);
 	const base = observeBase(payload);
-	await postObserve({
+	observeFireAndForget({
 		hookType: "prompt_submit",
 		sessionId: base.sessionId,
 		project: base.project,
 		cwd: base.cwd,
 		timestamp: base.timestamp,
-		data: { prompt: payload.prompt || "" },
+		data: { prompt: typeof prompt === "string" ? prompt : "" },
 	});
 }
 
