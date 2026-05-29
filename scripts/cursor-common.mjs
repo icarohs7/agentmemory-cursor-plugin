@@ -3,6 +3,7 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { resolveProject } from "./resolve-project.mjs";
 
 /** Shared helpers for Cursor-native agentmemory hooks. */
 
@@ -246,11 +247,11 @@ export function extractImageData(output) {
 
 export function observeBase(payload) {
 	const sid = sessionId(payload);
-	const root = projectRoot(payload);
+	const cwd = projectRoot(payload);
 	return {
 		sessionId: sid,
-		project: root,
-		cwd: root,
+		project: resolveProject(cwd),
+		cwd,
 		timestamp: new Date().toISOString(),
 	};
 }
