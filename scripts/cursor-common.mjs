@@ -193,22 +193,45 @@ export function observeFireAndForget(body, { timeoutMs = 3000, exitMs = 500 } = 
 }
 
 export async function postSessionStart(body, { inject = false } = {}) {
-	const timeoutMs = inject ? 1500 : 800;
+	const url = `${REST_URL}/agentmemory/session/start`;
+	const init = {
+		method: "POST",
+		headers: authHeaders(),
+		body: JSON.stringify(body),
+	};
+
+	if (!inject) {
+		fetch(url, {
+			...init,
+			signal: AbortSignal.timeout(800),
+		})
+			.then((res) => {
+				hookLog(
+					"session/start",
+					`session=${body.sessionId?.slice(0, 8)}…`,
+					`project=${body.project ?? "(none)"}`,
+					res.ok ? `ok ${res.status}` : `fail ${res.status}`,
+				);
+			})
+			.catch((err) => {
+				hookLog("session/start", "error", err?.message ?? err);
+			});
+		return;
+	}
+
 	try {
-		const res = await fetch(`${REST_URL}/agentmemory/session/start`, {
-			method: "POST",
-			headers: authHeaders(),
-			body: JSON.stringify(body),
-			signal: AbortSignal.timeout(timeoutMs),
+		const res = await fetch(url, {
+			...init,
+			signal: AbortSignal.timeout(1500),
 		});
 		hookLog(
 			"session/start",
 			`session=${body.sessionId?.slice(0, 8)}…`,
 			`project=${body.project ?? "(none)"}`,
 			res.ok ? `ok ${res.status}` : `fail ${res.status}`,
-			inject ? "inject=true" : "",
+			"inject=true",
 		);
-		if (inject && res.ok) {
+		if (res.ok) {
 			const data = await res.json();
 			if (typeof data.context === "string" && data.context) {
 				hookLog("session/start", "injected context", `${data.context.length} chars`);
